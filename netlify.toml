@@ -1,0 +1,10 @@
+# Static site: no build step, publish this folder as-is.
+[build]
+  publish = "."
+
+# Images and textures rarely change; let browsers keep them for a week.
+# (CSS and JS are versioned with ?v= in index.html, so they refresh on each release.)
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
