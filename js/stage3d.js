@@ -5,8 +5,9 @@
    with transform-style: preserve-3d, so it works from a double-clicked file
    exactly like it works on the server.
 
-     01 kraft bowl   — 40 trapezoid wall strips + rolled rim, food, clear lid,
-                       lid skirt, logo sticker
+     01 kraft bowl   — 28 leaning wall strips + rolled rim, food, clear lid,
+                       logo sticker; built as three stacked scenes (see
+                       buildBowl) so it stays cheap to draw
      02 meal tray    — straight ribbed walls + rounded corners, flange, food,
                        sloped clear dome lid, sticker
 
@@ -50,42 +51,55 @@
   function img(path) { return 'url("' + new URL(path, document.baseURI).href + '")'; }
 
   /* ---------------------------------------------------------------- BOWL */
-  function buildBowl(m) {
-    var rT = 130, rB = 104, H = 100, N = 40;
+  /* Why three scenes: each time the page repaints, the browser depth-sorts
+     every piece of a 3D scene and CUTS any piece that crosses the plane of
+     another. The 32 round wall strips face 32 directions, so in one scene
+     their planes would slice the food, rim and lid into hundreds of fragments
+     every frame. Split into shadow / walls / top scenes (painted in that
+     order), nothing ever crosses: the strips form a closed ring, and the top
+     pieces are all flat and parallel. Same look, a fraction of the work. */
+  function buildBowl(p) {
+    var rT = 130, rB = 104, H = 100, N = 28;
     var rM = (rT + rB) / 2, L = Math.hypot(H, rT - rB), phi = Math.atan2(rT - rB, H) / RAD;
-    var wT = 2 * Math.PI * rT / N + 1.4, wB = 2 * Math.PI * rB / N + 1.4, ins = (wT - wB) / 2;
-    var clip = 'polygon(0 0,100% 0,calc(100% - ' + px(ins) + ') 100%,' + px(ins) + ' 100%)';
+    /* Plain rectangles as wide as the TOP of each facet — deliberately no
+       clip-path. A clip-path on a 3D (GPU) layer is drawn through its own mask
+       pass every frame; 32 of them were what made this bowl lag while the tray
+       (no clipped walls) stayed smooth. The strips still lean in for the taper;
+       neighbours just overlap ~3px at the bottom, same colour, invisible. */
+    var wT = 2 * Math.PI * rT / N + 1.4;
     var walls = [];
-    flat(m, 'f--shadow', 2 * rB + 120, 2 * rB + 120, H / 2 + 2);
-    flat(m, 'f--kraft-deep f--disc', 2 * rB, 2 * rB, H / 2);
+    /* scene 1 — floor shadow (the base disc is never visible from above, so
+       it is not drawn at all) */
+    flat(p.shadow, 'f--shadow', 2 * rB + 120, 2 * rB + 120, H / 2 + 2);
+    /* scene 2 — the kraft wall */
     for (var i = 0; i < N; i++) {
       var a = i * 360 / N;
-      walls.push({ a: a, el: face(m, 'f--kraft f--wall', wT, L,
+      walls.push({ a: a, el: face(p.walls, 'f--kraft f--wall', wT, L,
         'rotateY(' + a + 'deg) translateZ(' + rM + 'px) rotateX(' + (-phi).toFixed(3) + 'deg)',
-        { 'clip-path': clip, '--bx': px(-i * wT) }) });
+        { '--bx': px(-i * wT) }) });
     }
-    /* rolled rim: a darker underside and a light top ring */
-    flat(m, 'f--rim-under', 2 * (rT + 7), 2 * (rT + 7), -H / 2 + 5);
-    flat(m, 'f--rim', 2 * (rT + 7), 2 * (rT + 7), -H / 2);
-    /* food, heaped a little in the middle */
-    var food = { '--food': img('assets/textures/bowl-food.webp'), '--fs': (2 * (rT - 9)) + 'px' };
-    flat(m, 'f--food f--disc', 2 * (rT - 9), 2 * (rT - 9), -H / 2 + 13, food);
-    flat(m, 'f--mound', 180, 180, -H / 2 + 9, food);
-    flat(m, 'f--mound', 110, 110, -H / 2 + 6, food);
-    /* clear lid: skirt around the rim, flat top, raised step, sticker, sheen */
-    var rL = rT + 9, NS = 40, wS = 2 * Math.PI * rL / NS + 1.2;
-    for (var s = 0; s < NS; s++) {
-      face(m, 'f--skirt', wS, 10, 'translate3d(0,' + (-H / 2 - 3) + 'px,0) rotateY(' + (s * 360 / NS) + 'deg) translateZ(' + rL + 'px)');
-    }
-    flat(m, 'f--lid f--disc', 2 * rL, 2 * rL, -H / 2 - 8);
-    flat(m, 'f--lidstep f--disc', 2 * (rT - 22), 2 * (rT - 22), -H / 2 - 12);
-    flat(m, 'f--sticker', 88, 88, -H / 2 - 12.6);
-    var sheen = flat(m, 'f--sheen f--disc', 2 * rL, 2 * rL, -H / 2 - 12.8);
+    /* scene 3 — everything flat on top, painted over the wall:
+       rolled rim (dark outer lip + light ring), food just under the rim so the
+       rim hides its edge, then the clear lid (two edge rings for thickness,
+       flat top, raised step), sticker and sheen */
+    var t = p.top, rL = rT + 9;
+    flat(t, 'f--rim-under', 2 * (rT + 7), 2 * (rT + 7), -H / 2 + 5);
+    flat(t, 'f--food f--disc', 2 * (rT - 9), 2 * (rT - 9), -H / 2 + 4, { '--food': img('assets/textures/bowl-food.webp') });
+    flat(t, 'f--rim', 2 * (rT + 7), 2 * (rT + 7), -H / 2 - 0.6);
+    flat(t, 'f--lidring', 2 * rL, 2 * rL, -H / 2 - 2);
+    flat(t, 'f--lidring', 2 * rL, 2 * rL, -H / 2 - 5.5);
+    flat(t, 'f--lid f--disc', 2 * rL, 2 * rL, -H / 2 - 8);
+    flat(t, 'f--lidstep f--disc', 2 * (rT - 22), 2 * (rT - 22), -H / 2 - 12);
+    flat(t, 'f--sticker', 88, 88, -H / 2 - 12.6);
+    var sheen = flat(t, 'f--sheen f--disc', 2 * rL, 2 * rL, -H / 2 - 12.8);
     return { walls: walls, sheen: sheen, sheenY: -H / 2 - 12.8 };
   }
 
   /* ---------------------------------------------------------------- TRAY */
-  function buildTray(m) {
+  /* one scene: its straight walls barely cross its flat parts, so it is
+     already cheap to sort */
+  function buildTray(p) {
+    var m = p.main;
     var W = 300, Dp = 192, r = 36, H = 80, NC = 6;
     var walls = [], hw = W / 2, hd = Dp / 2, cx = hw - r, cz = hd - r;
     var rr = function (n) { return { 'border-radius': n + 'px' }; };
@@ -111,9 +125,8 @@
     flat(m, 'f--flange2', W + 22, Dp + 22, -H / 2 + 4, rr(r + 11));
     flat(m, 'f--flange', W + 22, Dp + 22, -H / 2, rr(r + 11));
     /* food */
-    var food = { '--food': img('assets/textures/tray-food.webp'), '--fs': (W - 12) + 'px ' + (Dp - 12) + 'px' };
+    var food = { '--food': img('assets/textures/tray-food.webp') };
     flat(m, 'f--tfood', W - 12, Dp - 12, -H / 2 + 12, Object.assign({ 'border-radius': (r - 6) + 'px' }, food));
-    flat(m, 'f--tmound', W - 80, Dp - 70, -H / 2 + 8, Object.assign({ 'border-radius': '40%' }, food));
     /* clear dome lid: skirt ring, four sloped panels, flat top, sticker, sheen */
     var yB = -H / 2 - 3, yT = -H / 2 - 44, yC = (yB + yT) / 2, rise = yB - yT;
     var botW = W + 24, botD = Dp + 24, topW = W - 72, topD = Dp - 58;
@@ -145,10 +158,11 @@
   /* rest pose: y = spin, x = camera tilt (negative looks down onto the lid) */
   var IDLE = [{ y: 24, x: -27 }, { y: -26, x: -25 }];
   var items = objs.map(function (el, i) {
-    var model = el.querySelector('.model');
-    var built = BUILD[model.getAttribute('data-build')](model);
+    var models = [].slice.call(el.querySelectorAll('.model')), parts = {};
+    models.forEach(function (md) { parts[md.getAttribute('data-part')] = md; });
+    var built = BUILD[el.getAttribute('data-build')](parts);
     return {
-      el: el, model: model, walls: built.walls, sheen: built.sheen, sheenY: built.sheenY,
+      el: el, models: models, walls: built.walls, sheen: built.sheen, sheenY: built.sheenY,
       name: el.getAttribute('data-name'), sub: el.getAttribute('data-sub'), tab: el.getAttribute('data-tab'),
       ry: IDLE[i].y, rx: IDLE[i].x, ty: IDLE[i].y, tx: IDLE[i].x, vy: 0, vx: 0,
       idleY: IDLE[i].y, idleX: IDLE[i].x, lastShade: 999
@@ -160,7 +174,8 @@
 
   /* shade the round walls from the angle each strip now faces */
   function shade(it) {
-    if (Math.abs(it.ry - it.lastShade) < 0.6) return;
+    /* each re-shade repaints the wall strips, so only do it every 4° of turn */
+    if (Math.abs(it.ry - it.lastShade) < 4) return;
     it.lastShade = it.ry;
     for (var i = 0; i < it.walls.length; i++) {
       var w = it.walls[i], th = (w.a + it.ry) * RAD, c = Math.cos(th), d;
@@ -170,7 +185,9 @@
     }
   }
   function paint(it) {
-    it.model.style.transform = 'rotateX(' + it.rx.toFixed(2) + 'deg) rotateY(' + it.ry.toFixed(2) + 'deg)';
+    /* every scene of the object turns together */
+    var tf = 'rotateX(' + it.rx.toFixed(2) + 'deg) rotateY(' + it.ry.toFixed(2) + 'deg)';
+    for (var m = 0; m < it.models.length; m++) it.models[m].style.transform = tf;
     if (it.sheen) {
       /* the highlight stays put while the lid turns under it */
       it.sheen.style.transform = 'translate3d(0,' + it.sheenY + 'px,0) rotateX(90deg) rotateZ(' + (-it.ry).toFixed(2) + 'deg)';
@@ -181,8 +198,15 @@
 
   function clamp(it) {
     if (it.tx < -58) { it.tx = -58; it.vx = 0; }
-    if (it.tx > -8) { it.tx = -8; it.vx = 0; }
+    /* always look from above the rim (the top scene paints over the wall) */
+    if (it.tx > -16) { it.tx = -16; it.vx = 0; }
   }
+
+  /* After the visitor turns a box it stays exactly where they left it; it only
+     eases back to its rest pose once nobody has touched it for HOLD ms. */
+  var HOLD = 5000, lastTouch = -1e9, holdT = 0;
+  function touch() { lastTouch = performance.now(); clearTimeout(holdT); }
+  function holding() { return performance.now() - lastTouch < HOLD; }
 
   function loop() {
     var it = items[active];
@@ -191,19 +215,33 @@
         it.ty += it.vy; it.tx += it.vx; it.vy *= 0.94; it.vx *= 0.94;
       } else {
         it.vy = it.vx = 0;
-        it.ty += (it.idleY - it.ty) * 0.02;
-        it.tx += (it.idleX - it.tx) * 0.02;
+        if (!holding()) {
+          /* take the short way home: drop whole turns first (no visual jump,
+             360° later looks identical), so it never unwinds a full spin */
+          var turns = Math.round((it.ty - it.idleY) / 360);
+          if (turns) { it.ty -= turns * 360; it.ry -= turns * 360; it.lastShade -= turns * 360; }
+          it.ty += (it.idleY - it.ty) * 0.02;
+          it.tx += (it.idleX - it.tx) * 0.02;
+        }
       }
     }
     clamp(it);
     it.ry += (it.ty - it.ry) * 0.12;
     it.rx += (it.tx - it.rx) * 0.12;
     paint(it);
-    /* settled: park the loop (the CSS float keeps it alive) */
-    if (!dragging && Math.abs(it.vy) < 0.02 && Math.abs(it.vx) < 0.02 &&
-        Math.abs(it.ry - it.idleY) < 0.05 && Math.abs(it.rx - it.idleX) < 0.05) {
+    var still = !dragging && Math.abs(it.vy) < 0.02 && Math.abs(it.vx) < 0.02;
+    /* settled at rest: park the loop (the CSS float keeps it alive) */
+    if (still && Math.abs(it.ry - it.idleY) < 0.05 && Math.abs(it.rx - it.idleX) < 0.05) {
       it.ry = it.ty = it.idleY; it.rx = it.tx = it.idleX;
       paint(it); raf = null; return;
+    }
+    /* settled where the visitor left it: park, and wake when the hold ends */
+    if (still && holding() && Math.abs(it.ry - it.ty) < 0.05 && Math.abs(it.rx - it.tx) < 0.05) {
+      it.ry = it.ty; it.rx = it.tx;
+      paint(it); raf = null;
+      clearTimeout(holdT);
+      holdT = setTimeout(play, HOLD - (performance.now() - lastTouch) + 30);
+      return;
     }
     raf = requestAnimationFrame(loop);
   }
@@ -218,6 +256,7 @@
     stage.classList.add('touched'); view.classList.add('dragging');
     px0 = e.clientX; py0 = e.clientY; lastT = performance.now();
     var it = items[active]; it.vy = it.vx = 0;
+    touch();
     wake();
     if (e.pointerType === 'mouse') e.preventDefault();
     try { view.setPointerCapture(e.pointerId); } catch (_) {}
@@ -231,6 +270,7 @@
     it.ty += dx * 0.42; it.tx -= dy * 0.24;
     it.vy = dx * 0.42 * (16 / dt); it.vx = -dy * 0.24 * (16 / dt);
     clamp(it);
+    touch();
     if (e.cancelable && e.pointerType !== 'touch') e.preventDefault();
   }
   function up(e) {
@@ -239,6 +279,7 @@
     var it = items[active];
     it.vy = Math.max(-9, Math.min(9, it.vy));
     it.vx = Math.max(-5, Math.min(5, it.vx));
+    touch();                     /* the 5 s hold starts when the finger lifts */
     try { view.releasePointerCapture(e.pointerId); } catch (_) {}
   }
   view.addEventListener('pointerdown', down);
@@ -253,23 +294,32 @@
     else if (e.key === 'ArrowUp') it.tx += 8;
     else if (e.key === 'ArrowDown') it.tx -= 8;
     else return;
-    e.preventDefault(); stage.classList.add('touched'); clamp(it); wake();
+    e.preventDefault(); stage.classList.add('touched'); clamp(it); touch(); wake();
   });
 
   /* gentle cursor-follow while resting (mouse only, until the first drag) */
+  /* only while the mouse is actually over the stage (it used to listen on the
+     whole window, which kept the 3D turning — and working — non-stop) */
   if (finePointer) {
     var touched = false;
     stage.addEventListener('pointerdown', function () { touched = true; });
-    window.addEventListener('pointermove', function (e) {
-      if (dragging || touched || !visible) return;
+    view.addEventListener('pointermove', function (e) {
+      if (dragging || touched || e.pointerType !== 'mouse') return;
       var r = view.getBoundingClientRect();
-      if (r.bottom < 0 || r.top > window.innerHeight) return;
       var it = items[active];
-      it.ty = it.idleY + ((e.clientX - (r.left + r.width / 2)) / window.innerWidth) * 16;
-      it.tx = it.idleX - ((e.clientY - (r.top + r.height / 2)) / window.innerHeight) * 8;
+      it.ty = it.idleY + ((e.clientX - (r.left + r.width / 2)) / r.width) * 18;
+      it.tx = it.idleX - ((e.clientY - (r.top + r.height / 2)) / r.height) * 8;
       clamp(it);
       play();
     }, { passive: true });
+    /* leaving (hover mode only): ease back to rest. After a real drag the box
+       keeps the pose it was left in until the 5 s hold runs out. */
+    view.addEventListener('pointerleave', function (e) {
+      if (dragging || touched || e.pointerType !== 'mouse') return;
+      var it = items[active];
+      it.ty = it.idleY; it.tx = it.idleX;
+      play();
+    });
   }
 
   /* ---- switching ---- */

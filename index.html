@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap">
 <link rel="preload" as="image" href="assets/logo/seal-512.webp">
-<link rel="stylesheet" href="css/styles.css?v=23">
+<link rel="stylesheet" href="css/styles.css?v=28">
 
 <script>
   /* runs before first paint: flags JS, skips the intro on repeat visits in the same session */
@@ -116,13 +116,16 @@
     <div class="stage" id="stage">
       <div class="stage__glow" aria-hidden="true"></div>
       <div class="stage__view" id="stageView" tabindex="0" role="group" aria-roledescription="عرض ثلاثي الأبعاد" aria-label="علب بيت سيرين بتقنية ثلاثية الأبعاد — اسحب أو استعمل الأسهم للتدوير">
-        <div class="obj obj--bowl is-active" data-name="علبة الوجبة" data-sub="وجبات فردية طازة كل يوم" data-tab="mandi">
-          <div class="obj__wrap"><div class="obj__scale"><div class="model" data-build="bowl"></div></div></div>
-          <div class="obj__steam" aria-hidden="true"><i></i><i></i><i></i></div>
+        <!-- the bowl is three stacked 3D scenes (shadow / walls / top): pieces
+             are depth-sorted only inside their own scene, so the round walls
+             never have to cut the flat lid and rim apart on every frame -->
+        <div class="obj obj--bowl is-active" data-build="bowl" data-name="علبة الوجبة" data-sub="وجبات فردية طازة كل يوم" data-tab="mandi">
+          <div class="obj__wrap"><div class="obj__scale"><div class="model" data-part="shadow"></div></div></div>
+          <div class="obj__wrap"><div class="obj__scale"><div class="model" data-part="walls"></div></div></div>
+          <div class="obj__wrap"><div class="obj__scale"><div class="model" data-part="top"></div></div></div>
         </div>
-        <div class="obj obj--tray" data-name="علبة الوجبة" data-sub="مندي ومنسف لشخص أو لشخصين" data-tab="mandi">
-          <div class="obj__wrap"><div class="obj__scale"><div class="model" data-build="tray"></div></div></div>
-          <div class="obj__steam" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="obj obj--tray" data-build="tray" data-name="علبة الوجبة" data-sub="مندي ومنسف لشخص أو لشخصين" data-tab="mandi">
+          <div class="obj__wrap"><div class="obj__scale"><div class="model" data-part="main"></div></div></div>
         </div>
       </div>
       <button class="car-btn car-btn--prev" id="carPrev" type="button" aria-label="السابق"><svg><use href="#i-chev"/></svg></button>
@@ -221,7 +224,6 @@
     <div class="story__art" aria-hidden="true">
       <figure class="story__ph story__ph--a" data-parallax="-0.06">
         <img src="assets/story/story-bowls.webp" width="1000" height="1043" alt="" loading="lazy">
-        <svg class="steam" viewBox="0 0 120 160"><path d="M30 150c-14-22 14-34 0-58s14-36 0-60"/><path d="M60 150c-14-22 14-34 0-58s14-36 0-60"/><path d="M90 150c-14-22 14-34 0-58s14-36 0-60"/></svg>
       </figure>
       <figure class="story__ph story__ph--b" data-parallax="0.08">
         <img src="assets/story/story-trays.webp" width="1000" height="776" alt="" loading="lazy">
@@ -335,10 +337,10 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="js/menu-data.js?v=23" defer></script>
-<script src="js/main.js?v=23" defer></script>
-<script src="js/stage3d.js?v=23" defer></script>
-<script src="js/cart.js?v=23" defer></script>
-<script src="js/wall.js?v=23" defer></script>
+<script src="js/menu-data.js?v=28" defer></script>
+<script src="js/main.js?v=28" defer></script>
+<script src="js/stage3d.js?v=28" defer></script>
+<script src="js/cart.js?v=28" defer></script>
+<script src="js/wall.js?v=28" defer></script>
 </body>
 </html>

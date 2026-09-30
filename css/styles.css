@@ -276,6 +276,9 @@ html.ready .stage{opacity:1;transform:none}
 }
 .obj.is-active{opacity:1;visibility:visible;pointer-events:auto;transform:none;transition-delay:0s}
 .obj__wrap,.obj__scale,.model{position:relative;width:0;height:0;transform-style:preserve-3d}
+/* several wraps (the bowl's shadow / walls / top scenes) share one grid cell,
+   so they sit exactly on top of each other and paint in DOM order */
+.obj__wrap{grid-area:1/1}
 .obj__scale{transform:scale(calc(var(--k) * var(--size,1)))}
 .obj--bowl{--size:1.24}
 .obj--tray{--size:1.1}
@@ -286,7 +289,9 @@ html.ready .stage{opacity:1;transform:none}
 @keyframes floatB{0%,100%{transform:translate3d(0,8px,0) rotateY(2.5deg)}50%{transform:translate3d(0,-8px,0) rotateY(-2.5deg)}}
 .stage__view.dragging .obj__wrap{animation-play-state:paused}
 
-.f{position:absolute;left:0;top:0;display:block}
+/* will-change fixes each face's raster scale, so turning the model moves the
+   GPU textures instead of repainting them every frame */
+.f{position:absolute;left:0;top:0;display:block;will-change:transform}
 .f--disc{border-radius:50%}
 /* kraft paper (bowl) */
 .f--kraft{
@@ -298,17 +303,16 @@ html.ready .stage{opacity:1;transform:none}
 /* round walls are re-shaded by JS as they turn (--d = darkness) */
 .f--wall::after{content:"";position:absolute;inset:0;background:#1f130b;opacity:var(--d,.2)}
 .f--rim{border-radius:50%;background:radial-gradient(closest-side,transparent calc(100% - 15px),#E6C3A2 calc(100% - 14px),#D2A983 calc(100% - 8px),#AE7F59 calc(100% - 2px),transparent calc(100% - 1px))}
-.f--rim-under{border-radius:50%;background:radial-gradient(closest-side,transparent calc(100% - 14px),#8A5E40 calc(100% - 13px),#6C472E calc(100% - 2px),transparent calc(100% - 1px))}
-.f--food{background:var(--food) center/cover;box-shadow:inset 0 0 26px 8px rgba(40,24,14,.55)}
-.f--mound{
-  border-radius:50%;background:var(--food) center/var(--fs) no-repeat;
-  -webkit-mask:radial-gradient(closest-side,#000 62%,transparent);mask:radial-gradient(closest-side,#000 62%,transparent);
-}
+/* outer lip only (radius 131–137), so it never cuts through the wall strips */
+.f--rim-under{border-radius:50%;background:radial-gradient(closest-side,transparent calc(100% - 6px),#8A5E40 calc(100% - 5px),#6C472E calc(100% - 1.5px),transparent calc(100% - .5px))}
+/* vignettes are gradients, not blurred inset shadows (much cheaper to draw) */
+.f--food{background:radial-gradient(closest-side,transparent 70%,rgba(40,24,14,.6) 100%),var(--food) center/cover}
 /* clear PET lid */
-.f--skirt{background:linear-gradient(180deg,rgba(255,255,255,.7) 0 1.5px,rgba(255,255,255,.18) 2.5px,rgba(255,255,255,.07))}
+.f--lidring{border-radius:50%;background:radial-gradient(closest-side,transparent calc(100% - 4px),rgba(255,255,255,.55) calc(100% - 3px),rgba(255,255,255,.18) calc(100% - 1px),transparent 100%)}
 .f--lid{
-  background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.36),rgba(255,255,255,.1) 26%,rgba(255,255,255,.03) 58%,rgba(255,255,255,.13));
-  box-shadow:inset 0 0 0 2px rgba(255,255,255,.62),inset 0 0 30px rgba(255,255,255,.2);
+  background:radial-gradient(closest-side,transparent 86%,rgba(255,255,255,.2) 100%),
+    radial-gradient(circle at 34% 28%,rgba(255,255,255,.36),rgba(255,255,255,.1) 26%,rgba(255,255,255,.03) 58%,rgba(255,255,255,.13));
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.62);
 }
 .f--lidstep{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5),0 0 0 1px rgba(255,255,255,.12)}
 .f--sticker{border-radius:50%;background:url(../assets/logo/sticker-512.webp) center/cover;box-shadow:0 0 0 1px rgba(46,30,20,.2)}
@@ -324,22 +328,10 @@ html.ready .stage{opacity:1;transform:none}
 .f--black{background:#141211}
 .f--flange{border:11px solid #1f1c1a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 0 0 1px rgba(255,255,255,.08)}
 .f--flange2{border:11px solid #0b0a09}
-.f--tfood{background:var(--food) center/cover;box-shadow:inset 0 0 20px 6px rgba(0,0,0,.6)}
-.f--tmound{background:var(--food) center/var(--fs) no-repeat;-webkit-mask:radial-gradient(closest-side,#000 55%,transparent);mask:radial-gradient(closest-side,#000 55%,transparent)}
+.f--tfood{background:radial-gradient(closest-side,transparent 74%,rgba(0,0,0,.5) 100%),var(--food) center/cover}
 .f--lskirt{border:3px solid rgba(255,255,255,.38)}
 .f--panel{background:linear-gradient(0deg,rgba(255,255,255,.07),rgba(255,255,255,.2));border-top:2px solid rgba(255,255,255,.6)}
 .f--ltop{background:linear-gradient(125deg,rgba(255,255,255,.3),rgba(255,255,255,.06) 42%,rgba(255,255,255,.13));box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
-/* steam: soft cream wisps, drawn flat above the 3D so they are never hidden */
-.obj__steam{position:absolute;left:50%;top:var(--steam-top,16%);width:0;height:0;pointer-events:none}
-.obj__steam i{
-  position:absolute;left:-34px;top:-90px;width:68px;height:120px;border-radius:50%;opacity:0;
-  background:radial-gradient(closest-side,rgba(247,232,217,.55),rgba(247,232,217,.18) 55%,transparent);
-  animation:wisp 4.2s var(--ease) infinite;
-}
-.obj__steam i:nth-child(2){left:-70px;animation-delay:1.4s}
-.obj__steam i:nth-child(3){left:4px;animation-delay:2.8s}
-@keyframes wisp{0%{opacity:0;transform:translate3d(0,40px,0) scale(.55,.7)}35%{opacity:.75}100%{opacity:0;transform:translate3d(8px,-60px,0) scale(1.15,1.3)}}
-.obj--tray .obj__steam{--steam-top:20%}
 
 .car-btn{
   position:absolute;top:calc(clamp(340px,44vw,580px) / 2);translate:0 -50%;z-index:3;
@@ -506,11 +498,6 @@ html.ready .stage{opacity:1;transform:none}
 .story__ph--a{width:66%;aspect-ratio:1;top:0;inset-inline-start:0;rotate:-3deg;z-index:1}
 .story__ph--b{width:56%;aspect-ratio:1.28;bottom:0;inset-inline-end:0;rotate:4deg;z-index:2;border:8px solid var(--cream)}
 .story__seal{position:absolute;width:clamp(96px,11vw,136px);bottom:8%;inset-inline-start:6%;z-index:3;border-radius:50%;box-shadow:0 18px 30px -12px rgba(46,30,20,.7);animation:spin 36s linear infinite}
-.steam{position:absolute;left:50%;top:6%;width:40%;translate:-50% 0;overflow:visible;pointer-events:none}
-.steam path{fill:none;stroke:rgba(247,232,217,.75);stroke-width:5;stroke-linecap:round;filter:blur(3px);opacity:0;animation:steam 4.2s var(--ease) infinite}
-.steam path:nth-child(2){animation-delay:1.4s}
-.steam path:nth-child(3){animation-delay:2.8s}
-@keyframes steam{0%{opacity:0;transform:translateY(24px) scaleX(.8)}30%{opacity:.8}100%{opacity:0;transform:translateY(-36px) scaleX(1.25)}}
 .story__card{
   position:relative;padding:clamp(28px,4vw,48px);border-radius:32px;
   background:var(--cream);box-shadow:var(--shadow-2);
@@ -696,7 +683,6 @@ html.lock{overflow:hidden}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .js [data-reveal],.js [data-split] .wi,.js .dish{opacity:1;transform:none}
-  .steam,.obj__steam{display:none}
   .obj__wrap{animation:floatCalm 12s ease-in-out infinite!important;animation-duration:12s!important;animation-iteration-count:infinite!important}
 }
 @keyframes floatCalm{0%,100%{transform:translate3d(0,-3px,0)}50%{transform:translate3d(0,3px,0)}}
