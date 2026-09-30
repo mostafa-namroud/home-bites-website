@@ -2,9 +2,6 @@
 [build]
   publish = "."
 
-# Images and textures rarely change; let browsers keep them for a week.
-# (CSS and JS are versioned with ?v= in index.html, so they refresh on each release.)
-[[headers]]
-  for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=604800"
+# No custom cache rules on purpose: Netlify's default makes browsers check for
+# a newer file on every visit (a fast "not modified" reply when nothing
+# changed), so replacing an image shows up immediately on every phone.

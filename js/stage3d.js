@@ -125,7 +125,9 @@
     flat(m, 'f--flange2', W + 22, Dp + 22, -H / 2 + 4, rr(r + 11));
     flat(m, 'f--flange', W + 22, Dp + 22, -H / 2, rr(r + 11));
     /* food */
-    var food = { '--food': img('assets/textures/tray-food.webp') };
+    /* ?v= forces phones that cached the old crop (black corner) to fetch the
+       new one — bump it whenever this image file changes */
+    var food = { '--food': img('assets/textures/tray-food.webp?v=2') };
     flat(m, 'f--tfood', W - 12, Dp - 12, -H / 2 + 12, Object.assign({ 'border-radius': (r - 6) + 'px' }, food));
     /* clear dome lid: skirt ring, four sloped panels, flat top, sticker, sheen */
     var yB = -H / 2 - 3, yT = -H / 2 - 44, yC = (yB + yT) / 2, rise = yB - yT;
